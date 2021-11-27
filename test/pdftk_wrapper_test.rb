@@ -2,16 +2,22 @@
 
 require 'test_helper'
 class PdftkWrapperTest < Minitest::Test
+  def data_format
+    nil
+  end
+  def pdftk_path
+    "java -jar ../pdftk-all.jar"
+  end
 
   def setup
-    @pdftk = PdfForms.new 'pdftk', :data_format => data_format
-    @pdftk_utf8 = PdfForms.new 'pdftk', utf8_fields: true, data_format: data_format
+    @pdftk = PdfForms.new pdftk_path, :data_format => data_format
+    @pdftk_utf8 = PdfForms.new pdftk_path, utf8_fields: true, data_format: data_format
     @pdftk_options = PdfForms.new :flatten => true, :encrypt => true, :data_format => data_format
-    @pdftk_with_encrypt_options = PdfForms.new 'pdftk', :flatten => true, :encrypt => true, :data_format => data_format, :encrypt_password => 'secret', :encrypt_options => 'allow printing'
+    @pdftk_with_encrypt_options = PdfForms.new pdftk_path, :flatten => true, :encrypt => true, :data_format => data_format, :encrypt_password => 'secret', :encrypt_options => 'allow printing'
   end
 
   def test_should_check_executable
-    assert_raises(Cliver::Dependency::NotFound){ PdfForms.new('foobar') }
+    assert_raises(RuntimeError, "pdftk executable \"foobar\" not found"){ PdfForms.new('foobar') }
   end
 
   def test_get_fields_utf8
@@ -67,10 +73,10 @@ class PdftkWrapperTest < Minitest::Test
   end
 
   def test_fill_form_and_encrypt_for_opening
-    pdftk = PdfForms.new 'pdftk', :encrypt => true, :encrypt_password => 'secret', :encrypt_options => 'allow printing user_pw baz'
+    pdftk = PdfForms.new pdftk_path, :encrypt => true, :encrypt_password => 'secret', :encrypt_options => 'allow printing user_pw baz'
     pdftk.fill_form 'test/fixtures/form.pdf', 'output.pdf', 'program_name' => 'SOME TEXT'
     assert File.size('output.pdf') > 0
-    output = `pdftk output.pdf dump_data_fields 2>&1`
+    output = `#{pdftk_path} output.pdf dump_data_fields 2>&1`
     assert_match /(OWNER (OR USER )?PASSWORD REQUIRED|Bad password)/, output
     FileUtils.rm 'output.pdf'
   end
@@ -112,14 +118,13 @@ class PdftkWrapperTest < Minitest::Test
   end
 
   def test_fill_form_cli_injection
-    @pdftk.fill_form 'test/fixtures/form.pdf', 'output.pdf"; touch "test/cli_injection', 'program_name' => 'SOME TEXT' rescue nil
-    refute File.exist?('test/cli_injection'), "CLI injection successful"
-  ensure
-    FileUtils.rm 'output.pdf' if File.exist?('output.pdf')
-    FileUtils.rm 'test/cli_injection' if File.exist?('test/cli_injection')
+    begin
+      @pdftk.fill_form 'test/fixtures/form.pdf', 'output.pdf"; touch "test/cli_injection', 'program_name' => 'SOME TEXT' rescue nil
+      refute File.exist?('test/cli_injection'), "CLI injection successful"
+    ensure
+      FileUtils.rm 'output.pdf' if File.exist?('output.pdf')
+      FileUtils.rm 'test/cli_injection' if File.exist?('test/cli_injection')
+    end
   end
 
-  def data_format
-    nil
-  end
 end

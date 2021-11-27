@@ -3,9 +3,11 @@
 require 'test_helper'
 
 class PdfTest < Minitest::Test
-
+  def pdftk_path
+    "java -jar ../pdftk-all.jar"
+  end
   def setup
-    @pdftk = PdfForms::PdftkWrapper.new 'pdftk'
+    @pdftk = PdfForms::PdftkWrapper.new pdftk_path
   end
 
   def test_fields

@@ -1,7 +1,6 @@
 # coding: UTF-8
 
 require 'tempfile'
-require 'cliver'
 require 'safe_shell'
 require 'securerandom'
 
@@ -16,7 +15,7 @@ module PdfForms
 
     attr_reader :pdftk, :options
 
-    PDFTK = 'pdftk'
+    PDFTK = "java -jar ../pdftk-all.jar"
 
     # Initializes a new wrapper instance. Pdftk will be autodetected from PATH:
     # PdftkWrapper.new(:flatten => true, :encrypt => true, :encrypt_options => 'allow Printing')
@@ -28,8 +27,12 @@ module PdfForms
     # also supported.
     def initialize(*args)
       pdftk, options = normalize_args *args
-      @pdftk = Cliver.detect! pdftk
-      raise "pdftk executable #{@pdftk} not found" unless call_pdftk('-h') && $?.success?
+      @pdftk = pdftk
+      begin
+        call_pdftk('-h')
+      rescue Errno::ENOENT
+        raise "pdftk executable #{@pdftk.inspect} not found"
+      end
       @options = options
     end
 
@@ -85,7 +88,7 @@ module PdfForms
     # returns the commands output, check general execution success with
     # $?.success?
     def call_pdftk(*args)
-      SafeShell.execute! pdftk, *(args.flatten)
+      SafeShell.execute! *pdftk.split, *(args.flatten)
     end
 
     # concatenate documents, can optionally specify page ranges
