@@ -37,17 +37,17 @@ module PdfForms
     end
 
     # pdftk.fill_form '/path/to/form.pdf', '/path/to/destination.pdf', :field1 => 'value 1'
-    def fill_form(template, destination, data = {}, fill_options = {})
+    def fill_form(template, destination, form = {}, fill_options = {})
       q_template = normalize_path(template)
       q_destination = normalize_path(destination)
-      fdf = data_format(data)
+      fdf = data_format(form)
       tmp = Tempfile.new('pdf_forms-fdf')
       tmp.close
       fdf.save_to tmp.path
-      fill_options = {:tmp_path => tmp.path}.merge(fill_options)
+      fill_options = {tmp_path: tmp.path}.merge(fill_options)
 
-      args = [ q_template, 'fill_form', normalize_path(tmp.path), 'output', q_destination ]
-      result = call_pdftk(*(append_options(args, fill_options)))
+      args = [*append_options([ q_template, 'fill_form', normalize_path(tmp.path), 'output', q_destination ], fill_options)]
+      result = call_pdftk(*args)
 
       unless File.readable?(destination) && File.size(destination) > 0
         fdf_path = nil
@@ -130,9 +130,9 @@ module PdfForms
 
     private
 
-    def data_format(data)
+    def data_format(form)
       data_format = options[:data_format] || 'Fdf'
-      PdfForms.const_get(data_format).new(data)
+      PdfForms.const_get(data_format).new(form)
     end
 
     def option_or_global(attrib, local = {})
